@@ -1,0 +1,28 @@
+@startuml sequence_watch
+title Live change detection: file modified while fiaudit watch is running
+actor Attacker
+participant "Linux kernel\n(VFS + inotify)" as K
+participant "Watcher\n(main thread, epoll)" as W
+participant "ThreadPool\nworker" as P
+participant Auditor as A
+participant AuditLog as L
+participant "IAuditSink\n(/dev/fiaudit)" as D
+
+Attacker -> K : write("/etc/app.conf")
+K -> W : IN_MODIFY / IN_CLOSE_WRITE (readable fd, epoll)
+W -> W : drain_inotify(): map wd -> dir, build path
+W -> W : schedule(path, debounce 300 ms)
+note right of W : repeated events for the same path\nare coalesced (hash map)
+W -> P : submit(process_path(path)) when due
+P -> K : lstat() + open/read (hash_file, SHA-256)
+P -> P : classify(baseline record, current record)
+alt content or metadata differs and state not yet reported
+  P -> A : record(MODIFY, path, detail)
+  A -> D : ioctl(FIA_IOC_SUBMIT)
+  D --> A : seq, chain (SHA-256 chain in kernel memory)
+  A -> L : append(type, path, detail, kseq, khash)
+  L -> L : prev = last_hash; hash = SHA256(prev|payload)\nflock + write + fsync
+else identical to baseline
+  P -> P : ignore (or log "restored to baseline")
+end
+@enduml

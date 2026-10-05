@@ -1,0 +1,128 @@
+@startuml class_diagram
+title fiaudit - Class Diagram (user space, C++17)
+skinparam classAttributeIconSize 0
+hide empty members
+
+class SysError <<exception>> {
+  +code() : int
+}
+class Fd <<RAII, move-only>> {
+  -fd_ : int
+  +get() : int
+  +release() : int
+  +reset(fd)
+}
+class ExcludeSet {
+  -pats_ : vector<string>
+  -root_ : string
+  +excluded(path) : bool
+}
+class Sha256 {
+  -state_[8] : uint32
+  -buf_[64] : uint8
+  +update(data,len)
+  +final() : Digest
+  {static} +hash_file(path) : Digest
+  {static} +hardware_supported() : bool
+  -transform_blocks(p, n)
+}
+class ThreadPool {
+  -workers_ : vector<thread>
+  -queue_ : queue<function>
+  +submit(f) : future<R>
+  +wait_idle()
+}
+
+class FileRecord <<struct>> {
+  +path, sha256 : string
+  +kind : char
+  +size, mtime_ns : int
+  +mode, uid, gid : uint32
+  +same_content(o) : bool
+  +same_meta(o) : bool
+}
+class Baseline {
+  +root : string
+  +excludes : vector<string>
+  +files : map<string,FileRecord>
+  +find(path) : FileRecord*
+  +save(path)
+  {static} +load(path) : Baseline
+}
+class Change <<struct>> {
+  +kind : ChangeKind
+  +path, old_hash, new_hash, detail
+}
+class "scanner (free functions)" as Scanner {
+  +make_record(path, hash?) : optional<FileRecord>
+  +list_files(root, ExcludeSet)
+  +build_baseline(root, opts) : Baseline
+  +compare_with_baseline(bl, opts) : CompareResult
+  +classify(old, now) : optional<Change>
+}
+
+class LogRecord <<struct>> {
+  +seq, ts_ns, kseq : uint64
+  +type, path, detail, khash, prev, hash : string
+  +compute_hash() : string
+  {static} +parse(line, out) : bool
+}
+class AuditLog {
+  -fd_ : int
+  -last_hash_ : string
+  -mu_ : mutex
+  +append(type,path,detail,kseq,khash) : LogRecord
+  {static} +verify(path) : VerifyResult
+  {static} +read_all(path) : vector<LogRecord>
+}
+class Auditor {
+  +record(type,path,detail) : LogRecord
+}
+
+interface IAuditSink {
+  +name() : string
+  +available() : bool
+  +submit(type,path) : SubmitResult
+  +stats() : optional<SinkStats>
+  +verify(seq, chain_hex) : VerifyStatus
+}
+class KernelSink {
+  -fd_ : Fd
+  +read_events(max)
+}
+class MemorySink
+class NullSink
+
+class Watcher {
+  -ifd_, efd_, epfd_ : Fd
+  -wd_to_dir_ : map<int,string>
+  -pending_ : map<string,Pending>
+  -baseline_ : shared_ptr<Baseline>
+  +run()
+  +request_stop()
+  +request_reload()
+  -drain_inotify()
+  -process_path(path, hint)
+  -full_rescan(reason)
+}
+
+IAuditSink <|.. KernelSink
+IAuditSink <|.. MemorySink
+IAuditSink <|.. NullSink
+Auditor o-- AuditLog
+Auditor o-- IAuditSink
+AuditLog ..> LogRecord
+AuditLog ..> Sha256
+Baseline *-- "0..*" FileRecord
+Scanner ..> Baseline
+Scanner ..> ThreadPool
+Scanner ..> Sha256
+Scanner ..> ExcludeSet
+Scanner ..> Change
+Watcher o-- Baseline
+Watcher --> Auditor
+Watcher *-- ThreadPool
+Watcher *-- ExcludeSet
+Watcher *-- Fd
+KernelSink *-- Fd
+@enduml

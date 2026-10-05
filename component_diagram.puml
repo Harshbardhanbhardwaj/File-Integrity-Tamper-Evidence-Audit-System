@@ -1,0 +1,37 @@
+@startuml component_diagram
+title fiaudit - System architecture
+skinparam componentStyle rectangle
+package "User space" {
+  [CLI (main.cpp)] as CLI
+  [Watcher\n(inotify+epoll+eventfd)] as W
+  [Scanner\n(walk, hash, compare)] as S
+  [ThreadPool] as TP
+  [Sha256\n(SHA-NI / portable)] as H
+  [Baseline store] as B
+  [AuditLog\n(hash chain file)] as L
+  [Auditor] as A
+  [IAuditSink] as I
+}
+package "Kernel space" {
+  [fiaudit.ko\nchar device driver\nSHA-256 chain, ring buffer] as D
+  [VFS / inotify] as V
+  [crypto API (shash)] as C
+}
+database "Disk" as DISK
+CLI --> W
+CLI --> S
+CLI --> L
+W --> S
+W --> A
+S --> TP
+S --> H
+S --> B
+A --> L
+A --> I
+I --> D : open/ioctl/read/write/poll\n/dev/fiaudit
+D --> C
+V --> W : inotify events
+B --> DISK
+L --> DISK
+S --> DISK : lstat/read
+@enduml

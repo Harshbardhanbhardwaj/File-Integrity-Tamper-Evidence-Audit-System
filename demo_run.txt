@@ -1,0 +1,41 @@
+
+### 1. Create trusted baseline of /tmp/tmp.9cki0gjkiH/site
+baseline written: /tmp/tmp.9cki0gjkiH/base
+  root : /tmp/tmp.9cki0gjkiH/site
+  files: 3
+  sink : none
+
+### 2. Audit a clean tree -> exit code 0
+scanned 3 files, 0 change(s), 0 error(s)
+exit=0
+
+### 3. Start real-time watcher in background
+
+### 4. Simulate an intruder
+
+### 5. Audit log
+#1 2026-10-02T08:31:05.464Z SCAN /tmp/tmp.9cki0gjkiH/site  [baseline created: files=3]
+#2 2026-10-02T08:31:05.470Z SCAN /tmp/tmp.9cki0gjkiH/site  [watch started: dirs=3]
+#3 2026-10-02T08:31:05.470Z SCAN /tmp/tmp.9cki0gjkiH/site  [initial scan: scanned=3 changes=0]
+#4 2026-10-02T08:31:06.573Z CREATE /tmp/tmp.9cki0gjkiH/site/bin/.hidden.sh  [new file, size=34; new=405bf7ff43e012f8]
+#5 2026-10-02T08:31:06.573Z DELETE /tmp/tmp.9cki0gjkiH/site/conf/passwd.copy  [file no longer present; old=7cf1f940025c27c7]
+#6 2026-10-02T08:31:06.573Z MODIFY /tmp/tmp.9cki0gjkiH/site/conf/server.conf  [size 10 -> 23; old=f7407318bd2c4a39; new=51ae2e9f18a2dc41]
+#7 2026-10-02T08:31:06.574Z ATTRIB /tmp/tmp.9cki0gjkiH/site/bin/run.sh  [mode 0755 -> 4755; old=b4d644d427959490; new=b4d644d427959490]
+#8 2026-10-02T08:31:07.975Z SCAN /tmp/tmp.9cki0gjkiH/site  [watch stopped]
+(8 record(s) total)
+
+### 6. Verify the hash chain -> OK
+hash chain OK: 8 record(s), head=8cd40d0cf26e21ab...
+kernel cross-check: skipped (no device)
+
+### 7. Attacker edits the log to hide the backdoor
+TAMPER DETECTED in /tmp/tmp.9cki0gjkiH/log at line 4: record content modified (hash mismatch)
+exit=1  (1 = tampering detected)
+
+### 8. One-shot audit still reports the real differences
+[ADDED] /tmp/tmp.9cki0gjkiH/site/bin/.hidden.sh  (new file, size=34)
+[META] /tmp/tmp.9cki0gjkiH/site/bin/run.sh  (mode 0755 -> 4755)
+[DELETED] /tmp/tmp.9cki0gjkiH/site/conf/passwd.copy  (file no longer present)
+[MODIFIED] /tmp/tmp.9cki0gjkiH/site/conf/server.conf  (size 10 -> 23)
+scanned 3 files, 4 change(s), 0 error(s)
+exit=1

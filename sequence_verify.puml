@@ -1,0 +1,26 @@
+@startuml sequence_verify
+title verify-log: chain check + kernel cross-check
+actor Auditor_User as U
+participant "fiaudit CLI" as C
+participant AuditLog as L
+participant "KernelSink" as S
+participant "fiaudit.ko" as K
+
+U -> C : fiaudit verify-log --log audit.log
+C -> L : verify(path)
+loop each record
+  L -> L : parse, check seq == prev+1,\nprev == previous hash, recompute hash
+end
+L --> C : ok / first bad line
+alt chain broken
+  C --> U : TAMPER DETECTED at line N (exit 1)
+else chain ok
+  C -> S : open(/dev/fiaudit)
+  loop each record with kseq > 0
+    C -> S : verify(kseq, khash)
+    S -> K : ioctl(FIA_IOC_VERIFY)
+    K --> S : 0 / -EBADMSG / -ENOENT
+  end
+  C --> U : match / mismatch / not-retained counts\n(mismatch => TAMPER DETECTED)
+end
+@enduml

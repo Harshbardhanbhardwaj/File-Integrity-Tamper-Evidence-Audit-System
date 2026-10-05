@@ -1,0 +1,6 @@
+dataset: 64 files x 8 MiB = 512 MiB, nproc=1, SHA-NI cpu flag: 1
+sha256sum (coreutils)                  : 0.460 s
+fiaudit init, software SHA-256 (portable): 2.714 s
+fiaudit init, SHA-NI hardware path        : 0.538 s
+fiaudit check, full hash (SHA-NI)         : 0.515 s
+fiaudit check --quick (metadata only)     : 0.003 s

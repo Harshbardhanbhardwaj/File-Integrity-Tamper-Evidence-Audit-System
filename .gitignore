@@ -1,0 +1,10 @@
+build/
+bin/
+*.ko
+*.o
+*.mod*
+modules.order
+Module.symvers
+.tmp_versions/
+*.baseline
+fiaudit.log

@@ -1,0 +1,26 @@
+@startuml state_machine
+title Watcher daemon - state machine
+[*] --> Loading : fiaudit watch
+Loading --> Refused : baseline integrity fails\nor log chain broken (no --force)
+Refused --> [*] : exit 2
+Loading --> Starting : baseline + log OK
+Starting : add inotify watches (recursive)\nlog "watch started"\ninitial full scan
+Starting --> Idle
+state Monitoring {
+  Idle : epoll_wait(inotify, eventfd, timeout)
+  Idle --> Collecting : inotify readable
+  Collecting : drain events\nschedule(path, debounce)
+  Collecting --> Idle
+  Idle --> Analysing : debounce timer expired
+  Analysing : worker: hash + classify\nAuditor.record()
+  Analysing --> Idle
+  Idle --> Rescanning : IN_Q_OVERFLOW
+  Rescanning --> Idle
+}
+Idle --> Reloading : SIGHUP (eventfd wake-up)
+Reloading --> Idle : new baseline loaded + rescan
+Reloading --> Idle : load failed -> TAMPER record,\nkeep old baseline
+Idle --> Stopping : SIGINT / SIGTERM
+Stopping : flush pending paths\nwait for workers\nlog "watch stopped"
+Stopping --> [*] : exit 0
+@enduml

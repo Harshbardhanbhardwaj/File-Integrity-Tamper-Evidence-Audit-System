@@ -1,0 +1,28 @@
+== init / check ==
+  PASS: init creates baseline (rc=0)
+  PASS: check clean tree (rc=0)
+  PASS: check detects changes (rc=1)
+  PASS: reports MODIFIED a.txt
+  PASS: reports DELETED b.txt
+  PASS: reports ADDED c.txt
+  PASS: exclude pattern honoured
+  PASS: check --json (rc=1)
+  PASS: json output well-formed
+== baseline tamper detection ==
+  PASS: tampered baseline rejected (rc=2)
+== log verification ==
+  PASS: log chain valid (rc=0)
+  PASS: modified log detected (rc=1)
+== watch (live monitoring) ==
+  PASS: watch exits 0 on SIGTERM
+  PASS: live MODIFY logged
+  PASS: live DELETE logged
+  PASS: live CREATE in new dir logged
+  PASS: log valid after watch (rc=0)
+== watch refuses broken log ==
+  PASS: watch refuses tampered log (rc=2)
+== usage errors ==
+  PASS: unknown option (rc=64)
+  PASS: unknown command (rc=64)
+
+integration: 20 passed, 0 failed
